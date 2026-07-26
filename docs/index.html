@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="指で空き時間を塗って、みんなの予定が重なる時間を見つける日程調整アプリ「すきまっぷ」。">
+  <meta name="theme-color" content="#f4f1e8">
+  <title>すきまっぷ — みんなの「すき」を、地図に。</title>
+  <style>
+    :root {
+      --ink: #12382c;
+      --paper: #f4f1e8;
+      --leaf: #0d7454;
+      --lime: #ccf45e;
+      --sun: #ffbd4a;
+      --white: #fffefa;
+      --line: rgba(18, 56, 44, .16);
+      --shadow: 0 24px 80px rgba(18, 56, 44, .12);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 15% 10%, rgba(255,189,74,.32), transparent 24rem),
+        radial-gradient(circle at 90% 28%, rgba(204,244,94,.34), transparent 22rem),
+        var(--paper);
+      font-family: "Hiragino Sans", "Yu Gothic", system-ui, sans-serif;
+      line-height: 1.65;
+      overflow-x: hidden;
+    }
+    a { color: inherit; }
+    .skip { position: fixed; left: 1rem; top: -5rem; z-index: 20; padding: .8rem 1rem; background: var(--ink); color: white; }
+    .skip:focus { top: 1rem; }
+    .shell { width: min(1180px, calc(100% - 2rem)); margin-inline: auto; }
+    header { display: flex; align-items: center; justify-content: space-between; padding: 1.4rem 0; }
+    .brand { display: inline-flex; align-items: center; gap: .7rem; text-decoration: none; font-weight: 900; letter-spacing: -.04em; }
+    .brand-mark { display: grid; grid-template-columns: repeat(2, .52rem); gap: .15rem; rotate: -7deg; }
+    .brand-mark i { width: .52rem; height: .52rem; border-radius: .2rem; background: var(--leaf); }
+    .brand-mark i:nth-child(2), .brand-mark i:nth-child(3) { opacity: .35; }
+    .mini-cta, .cta {
+      display: inline-flex; align-items: center; justify-content: center; gap: .6rem;
+      border: 1px solid var(--ink); border-radius: 999px; text-decoration: none;
+      font-weight: 850; transition: transform .2s, box-shadow .2s, background .2s;
+    }
+    .mini-cta { min-height: 2.8rem; padding: .55rem 1.1rem; background: rgba(255,255,255,.5); }
+    .cta { min-height: 3.6rem; padding: .8rem 1.45rem; background: var(--ink); color: white; box-shadow: 5px 5px 0 var(--lime); }
+    .mini-cta:hover, .cta:hover { transform: translateY(-3px); box-shadow: 0 12px 28px rgba(18,56,44,.18); }
+    .hero { position: relative; display: grid; grid-template-columns: 1.12fr .88fr; align-items: center; gap: 3rem; min-height: 78vh; padding: 5rem 0 7rem; }
+    .eyebrow { display: inline-flex; align-items: center; gap: .5rem; padding: .4rem .75rem; border: 1px solid var(--line); border-radius: 999px; background: rgba(255,255,255,.45); font-size: .82rem; font-weight: 800; }
+    .eyebrow::before { content: ""; width: .55rem; height: .55rem; border-radius: 50%; background: var(--leaf); box-shadow: 0 0 0 .25rem rgba(13,116,84,.12); }
+    h1 { margin: 1.4rem 0 1.2rem; max-width: 760px; font-size: clamp(3.4rem, 8.4vw, 7.8rem); line-height: .93; letter-spacing: -.09em; }
+    h1 em { position: relative; color: var(--leaf); font-style: normal; white-space: nowrap; }
+    h1 em::after { content: ""; position: absolute; left: .04em; right: -.04em; bottom: -.06em; height: .12em; border-radius: 999px; background: var(--sun); z-index: -1; rotate: -2deg; }
+    .lead { max-width: 35rem; margin: 0 0 2rem; font-size: clamp(1.05rem, 2vw, 1.3rem); font-weight: 600; }
+    .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; }
+    .note { font-size: .82rem; font-weight: 700; opacity: .68; }
+    .visual { position: relative; min-height: 510px; }
+    .blob { position: absolute; inset: 4% -8% 3% 2%; border-radius: 44% 56% 68% 32% / 51% 32% 68% 49%; background: var(--leaf); rotate: 4deg; box-shadow: var(--shadow); }
+    .map-card { position: absolute; inset: 12% 3% 7% 5%; display: grid; grid-template-columns: 4.2rem 1fr; border: 1px solid rgba(255,255,255,.55); border-radius: 2.2rem; padding: 1.2rem; background: rgba(255,254,250,.9); backdrop-filter: blur(16px); rotate: -3deg; box-shadow: var(--shadow); }
+    .times { display: grid; align-content: space-around; font-size: .68rem; font-weight: 800; opacity: .55; }
+    .heatmap { display: grid; grid-template-columns: repeat(5, 1fr); gap: .45rem; }
+    .cell { border-radius: .7rem; background: rgba(13,116,84,.08); animation: breathe 4s ease-in-out infinite; }
+    .cell:nth-child(4n+1) { background: rgba(13,116,84,.28); animation-delay: -.8s; }
+    .cell:nth-child(5n+2) { background: rgba(13,116,84,.54); animation-delay: -1.7s; }
+    .cell:nth-child(7n) { background: var(--leaf); animation-delay: -2.4s; }
+    .sticker { position: absolute; right: -1rem; top: 7%; display: grid; place-items: center; width: 7.5rem; aspect-ratio: 1; border-radius: 50%; background: var(--lime); font-size: .8rem; font-weight: 950; text-align: center; rotate: 10deg; box-shadow: 5px 7px 0 var(--ink); }
+    .proof { padding: 1.1rem 0 6rem; font-size: .8rem; font-weight: 800; text-transform: uppercase; letter-spacing: .15em; opacity: .56; }
+    .marquee { display: flex; width: max-content; gap: 3rem; animation: scroll 22s linear infinite; }
+    .section { padding: 7rem 0; }
+    .section-head { display: grid; grid-template-columns: .7fr 1.3fr; gap: 2rem; align-items: end; margin-bottom: 2.2rem; }
+    .section h2 { margin: 0; max-width: 800px; font-size: clamp(2.6rem, 6vw, 5.6rem); line-height: 1; letter-spacing: -.075em; }
+    .kicker { margin: 0; font-size: .82rem; font-weight: 900; letter-spacing: .15em; text-transform: uppercase; }
+    .bento { display: grid; grid-template-columns: repeat(12, 1fr); gap: 1rem; }
+    .tile { position: relative; overflow: hidden; min-height: 250px; padding: 1.8rem; border: 1px solid var(--line); border-radius: 2rem; background: rgba(255,254,250,.72); box-shadow: 0 18px 50px rgba(18,56,44,.07); }
+    .tile:nth-child(1) { grid-column: span 7; background: var(--ink); color: white; }
+    .tile:nth-child(2) { grid-column: span 5; background: var(--lime); }
+    .tile:nth-child(3) { grid-column: span 4; background: var(--sun); }
+    .tile:nth-child(4) { grid-column: span 8; }
+    .tile small { font-weight: 900; letter-spacing: .14em; opacity: .65; }
+    .tile h3 { margin: 3.5rem 0 .7rem; font-size: clamp(1.7rem, 3vw, 2.8rem); line-height: 1.05; letter-spacing: -.055em; }
+    .tile p { max-width: 32rem; margin: 0; font-weight: 600; }
+    .tile .big { position: absolute; right: 1rem; top: -.35rem; font-size: 7rem; line-height: 1; font-weight: 950; opacity: .1; }
+    .final { margin: 3rem auto 6rem; padding: clamp(2rem, 6vw, 5rem); border-radius: 3rem; background: var(--leaf); color: white; text-align: center; overflow: hidden; }
+    .final h2 { margin: 0 auto 1.2rem; max-width: 850px; font-size: clamp(2.8rem, 7vw, 6.8rem); line-height: .94; letter-spacing: -.08em; }
+    .final p { margin: 0 auto 2rem; max-width: 34rem; font-weight: 650; }
+    .final .cta { background: var(--lime); color: var(--ink); border-color: var(--lime); box-shadow: 5px 5px 0 var(--ink); }
+    footer { display: flex; justify-content: space-between; gap: 1rem; padding: 0 0 2.5rem; font-size: .8rem; font-weight: 700; opacity: .65; }
+    @keyframes breathe { 50% { transform: scale(.9); opacity: .72; } }
+    @keyframes scroll { to { transform: translateX(calc(-50% - 1.5rem)); } }
+    @media (max-width: 820px) {
+      .hero { grid-template-columns: 1fr; padding-top: 3rem; }
+      .visual { min-height: 420px; }
+      .section-head { grid-template-columns: 1fr; }
+      .tile:nth-child(n) { grid-column: 1 / -1; }
+      .tile { min-height: 230px; }
+    }
+    @media (max-width: 520px) {
+      h1 { font-size: clamp(3.2rem, 17vw, 5rem); }
+      .hero { gap: 1rem; }
+      .visual { min-height: 350px; }
+      .map-card { inset: 10% 0 5%; grid-template-columns: 3rem 1fr; border-radius: 1.6rem; }
+      .sticker { width: 6rem; right: -.4rem; }
+      footer { flex-direction: column; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip" href="#main">本文へ移動</a>
+  <header class="shell">
+    <a class="brand" href="#" aria-label="すきまっぷ トップ">
+      <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+      すきまっぷ
+    </a>
+    <a class="mini-cta" href="https://suki-map.glad-knoll-5700.chatgpt.site/">無料ではじめる <span aria-hidden="true">↗</span></a>
+  </header>
+
+  <main id="main">
+    <section class="hero shell">
+      <div>
+        <span class="eyebrow">登録不要・スマホでかんたん</span>
+        <h1>みんなの<br><em>「すき」</em>を、<br>地図に。</h1>
+        <p class="lead">空いている時間を、指でなぞって塗るだけ。予定の重なりがひと目でわかる、新しい日程調整です。</p>
+        <div class="actions">
+          <a class="cta" href="https://suki-map.glad-knoll-5700.chatgpt.site/">日程調整をつくる <span aria-hidden="true">→</span></a>
+          <span class="note">メールアドレス不要<br>いますぐ使えます</span>
+        </div>
+      </div>
+      <div class="visual" aria-label="時間帯ヒートマップのイメージ">
+        <div class="blob"></div>
+        <div class="map-card">
+          <div class="times"><span>10:00</span><span>12:00</span><span>14:00</span><span>16:00</span><span>18:00</span></div>
+          <div class="heatmap" aria-hidden="true">
+            <i class="cell"></i><i class="cell"></i><i class="cell"></i><i class="cell"></i><i class="cell"></i>
+            <i class="cell"></i><i class="cell"></i><i class="cell"></i><i class="cell"></i><i class="cell"></i>
+            <i class="cell"></i><i class="cell"></i><i class="cell"></i><i class="cell"></i><i class="cell"></i>
+            <i class="cell"></i><i class="cell"></i><i class="cell"></i><i class="cell"></i><i class="cell"></i>
+            <i class="cell"></i><i class="cell"></i><i class="cell"></i><i class="cell"></i><i class="cell"></i>
+          </div>
+        </div>
+        <div class="sticker">全員の<br>すきま<br>発見！</div>
+      </div>
+    </section>
+
+    <div class="proof" aria-hidden="true">
+      <div class="marquee">
+        <span>NO LOGIN</span><span>15 SEC SYNC</span><span>TOUCH FRIENDLY</span><span>HEATMAP</span><span>MADE FOR GROUPS</span>
+        <span>NO LOGIN</span><span>15 SEC SYNC</span><span>TOUCH FRIENDLY</span><span>HEATMAP</span><span>MADE FOR GROUPS</span>
+      </div>
+    </div>
+
+    <section class="section shell" id="features">
+      <div class="section-head">
+        <p class="kicker">Why Suki Map</p>
+        <h2>調整の面倒を、<br>気持ちいい体験に。</h2>
+      </div>
+      <div class="bento">
+        <article class="tile"><span class="big" aria-hidden="true">01</span><small>PAINT</small><h3>なぞって、塗る。</h3><p>細かな時間帯も、マウスや指で直感的に選択。予定表とにらめっこする必要はありません。</p></article>
+        <article class="tile"><span class="big" aria-hidden="true">02</span><small>SEE</small><h3>重なりが、見える。</h3><p>参加できる人が多いほど色が濃くなるヒートマップ。ベストな時間が自然に浮かびます。</p></article>
+        <article class="tile"><span class="big" aria-hidden="true">03</span><small>SHARE</small><h3>URLを送るだけ。</h3><p>アカウント登録なし。リンクを共有した瞬間から、みんなが回答できます。</p></article>
+        <article class="tile"><span class="big" aria-hidden="true">04</span><small>DECIDE</small><h3>迷わず、決まる。</h3><p>必要な所要時間まで考慮して、おすすめ候補を自動表示。最後のひと押しまで、すきまっぷが支えます。</p></article>
+      </div>
+    </section>
+
+    <section class="final shell">
+      <h2>予定が合うって、<br>うれしい。</h2>
+      <p>飲み会も、ミーティングも、旅行の相談も。次の予定は、空き時間を塗るところから。</p>
+      <a class="cta" href="https://suki-map.glad-knoll-5700.chatgpt.site/">すきまっぷを使ってみる <span aria-hidden="true">↗</span></a>
+    </section>
+  </main>
+
+  <footer class="shell">
+    <span>© 2026 すきまっぷ</span>
+    <span>みんなの時間が、重なる場所。</span>
+  </footer>
+</body>
+</html>
