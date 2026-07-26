@@ -1,6 +1,6 @@
 "use client";
 
-import { PointerEvent, useMemo, useRef } from "react";
+import { PointerEvent, useMemo, useRef, useState } from "react";
 import { applySelectionRange } from "@/lib/selection";
 import { createSlotIso, formatTime } from "@/lib/date-time";
 import type { SlotResult } from "@/types";
@@ -12,8 +12,10 @@ type Props = {
 };
 
 export function AvailabilityGrid({ dates, startMinute, endMinute, slotMinutes, selectedSlots, onChange, mode, results = new Map(), onInspect }: Props) {
+  const [activeDateIndex, setActiveDateIndex] = useState(0);
+  const activeDate = dates[activeDateIndex] ?? dates[0]!;
   const rowMinutes = useMemo(() => { const values: number[] = []; for (let minute = startMinute; minute < endMinute; minute += slotMinutes) values.push(minute); return values; }, [startMinute, endMinute, slotMinutes]);
-  const orderedKeys = useMemo(() => rowMinutes.flatMap((minute) => dates.map((date) => createSlotIso(date, minute))), [dates, rowMinutes]);
+  const orderedKeys = useMemo(() => rowMinutes.map((minute) => createSlotIso(activeDate, minute)), [activeDate, rowMinutes]);
   const drag = useRef<{ start: number; action: "add" | "remove"; baseline: Set<string> } | null>(null);
 
   function indexFromTarget(target: EventTarget | null): number | null {
@@ -43,22 +45,26 @@ export function AvailabilityGrid({ dates, startMinute, endMinute, slotMinutes, s
   }
 
   return (
-    <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white">
-      <div className="grid min-w-max" style={{ gridTemplateColumns: `4.5rem repeat(${dates.length}, minmax(5rem, 1fr))` }}>
-        <div className="sticky left-0 z-20 bg-white" />
-        {dates.map((date) => <div key={date} className="border-b border-l p-3 text-center text-sm font-bold">{new Intl.DateTimeFormat("ja-JP", { month: "numeric", day: "numeric", weekday: "short", timeZone: "Asia/Tokyo" }).format(new Date(`${date}T00:00:00+09:00`))}</div>)}
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+      <div className="flex min-h-14 items-center justify-between border-b px-2">
+        <button type="button" aria-label="前の日" disabled={activeDateIndex === 0} onClick={() => setActiveDateIndex((index) => Math.max(0, index - 1))} className="min-h-11 min-w-11 rounded-full text-xl font-bold text-emerald-800 disabled:opacity-20">←</button>
+        <div className="text-center">
+          <p className="text-sm font-black">{new Intl.DateTimeFormat("ja-JP", { month: "long", day: "numeric", weekday: "short", timeZone: "Asia/Tokyo" }).format(new Date(`${activeDate}T00:00:00+09:00`))}</p>
+          {dates.length > 1 && <p className="text-xs text-slate-500">{activeDateIndex + 1} / {dates.length}日</p>}
+        </div>
+        <button type="button" aria-label="次の日" disabled={activeDateIndex === dates.length - 1} onClick={() => setActiveDateIndex((index) => Math.min(dates.length - 1, index + 1))} className="min-h-11 min-w-11 rounded-full text-xl font-bold text-emerald-800 disabled:opacity-20">→</button>
       </div>
       <div
-        className="grid min-w-max select-none"
-        style={{ gridTemplateColumns: `4.5rem repeat(${dates.length}, minmax(5rem, 1fr))`, touchAction: mode === "edit" ? "none" : "pan-y pan-x" }}
+        className="grid select-none"
+        style={{ gridTemplateColumns: "4.25rem 1fr", touchAction: mode === "edit" ? "none" : "pan-y" }}
         onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerEnd} onPointerCancel={pointerEnd}
       >
         {rowMinutes.flatMap((minute, row) => [
-          <div key={`time-${minute}`} className="sticky left-0 z-10 flex min-h-11 items-center justify-center border-b bg-white text-xs text-slate-500">{formatTime(createSlotIso(dates[0], minute))}</div>,
-          ...dates.map((date, column) => {
-            const index = row * dates.length + column; const key = orderedKeys[index]; const result = results.get(key);
+          <div key={`time-${minute}`} className="flex min-h-9 items-center justify-center border-b bg-slate-50 text-xs font-bold text-slate-500">{formatTime(createSlotIso(activeDate, minute))}</div>,
+          ...[activeDate].map(() => {
+            const index = row; const key = orderedKeys[index]; const result = results.get(key);
             const selected = selectedSlots.has(key); const ratio = result?.totalCount ? result.availableCount / result.totalCount : 0;
-            return <button type="button" key={key} data-slot-index={index} aria-pressed={selected} aria-label={`${date} ${formatTime(key)} ${mode === "results" ? `${result?.availableCount ?? 0}/${result?.totalCount ?? 0}` : selected ? "選択済み" : "未選択"}`} onClick={() => mode === "results" && onInspect?.(key)} className="min-h-11 border-b border-l text-xs font-bold transition-colors" style={{ backgroundColor: mode === "edit" ? (selected ? "#059669" : "white") : ratio ? `rgba(5,150,105,${0.15 + ratio * 0.75})` : "white", color: mode === "edit" && selected || ratio > 0.55 ? "white" : "#334155" }}>{mode === "results" ? `${result?.availableCount ?? 0}/${result?.totalCount ?? 0}` : ""}</button>;
+            return <button type="button" key={key} data-slot-index={index} aria-pressed={selected} aria-label={`${activeDate} ${formatTime(key)} ${mode === "results" ? `${result?.availableCount ?? 0}/${result?.totalCount ?? 0}` : selected ? "選択済み" : "未選択"}`} onClick={() => mode === "results" && onInspect?.(key)} className="min-h-9 border-b border-l text-xs font-bold transition-colors" style={{ backgroundColor: mode === "edit" ? (selected ? "#059669" : "white") : ratio ? `rgba(5,150,105,${0.15 + ratio * 0.75})` : "white", color: mode === "edit" && selected || ratio > 0.55 ? "white" : "#334155" }}>{mode === "results" ? `${result?.availableCount ?? 0}/${result?.totalCount ?? 0}` : selected ? "✓" : ""}</button>;
           }),
         ])}
       </div>

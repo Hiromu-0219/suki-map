@@ -36,10 +36,18 @@ describe("recommendations", () => {
 });
 
 describe("event validation", () => {
-  it("rejects periods over 14 days", () => {
+  it("rejects periods over 7 days", () => {
     const result = eventInputSchema.safeParse({
       title: "test", description: "", startDate: "2026-07-01", endDate: "2026-07-20",
       dailyStartMinute: 540, dailyEndMinute: 1080, slotMinutes: 30, requiredDurationMin: 60,
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects daily ranges over 8 hours", () => {
+    const result = eventInputSchema.safeParse({
+      title: "test", description: "", startDate: "2026-07-01", endDate: "2026-07-01",
+      dailyStartMinute: 540, dailyEndMinute: 1081, slotMinutes: 30, requiredDurationMin: 60,
     });
     expect(result.success).toBe(false);
   });

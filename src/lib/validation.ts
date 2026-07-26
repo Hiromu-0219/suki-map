@@ -18,14 +18,14 @@ export const eventInputSchema = z
       (Date.parse(`${value.endDate}T00:00:00Z`) - Date.parse(`${value.startDate}T00:00:00Z`)) /
         86_400_000,
     );
-    if (days < 0 || days >= 14) {
-      context.addIssue({ code: "custom", path: ["endDate"], message: "候補期間は14日以内です" });
+    if (days < 0 || days >= 7) {
+      context.addIssue({ code: "custom", path: ["endDate"], message: "候補期間は7日以内です" });
     }
     if (value.dailyEndMinute <= value.dailyStartMinute) {
       context.addIssue({ code: "custom", path: ["dailyEndMinute"], message: "終了時刻を開始後にしてください" });
     }
-    if (value.dailyEndMinute - value.dailyStartMinute > 1080) {
-      context.addIssue({ code: "custom", path: ["dailyEndMinute"], message: "1日は18時間以内です" });
+    if (value.dailyEndMinute - value.dailyStartMinute > 480) {
+      context.addIssue({ code: "custom", path: ["dailyEndMinute"], message: "1日の候補時間は8時間以内です" });
     }
     if (value.requiredDurationMin > value.dailyEndMinute - value.dailyStartMinute) {
       context.addIssue({ code: "custom", path: ["requiredDurationMin"], message: "必要時間が候補時間を超えています" });
