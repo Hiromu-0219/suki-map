@@ -21,7 +21,10 @@
 /out/
 
 # production
-/build
+/dist
+/.wrangler
+!/build/
+!/build/sites-vite-plugin.ts
 
 # misc
 .DS_Store

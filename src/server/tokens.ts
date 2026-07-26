@@ -1,15 +1,13 @@
-import { createHash, randomBytes } from "node:crypto";
-
 export function createToken(): string {
-  return randomBytes(32).toString("base64url");
+  const bytes = crypto.getRandomValues(new Uint8Array(32));
+  return btoa(String.fromCharCode(...bytes)).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
 }
 
-export function hashToken(token: string): string {
-  const secret = process.env.EDIT_TOKEN_SECRET;
-  if (!secret || secret.length < 32) throw new Error("EDIT_TOKEN_SECRET must be at least 32 characters");
-  return createHash("sha256").update(`${secret}:${token}`).digest("hex");
+export async function hashToken(token: string): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`sukimap:${token}`));
+  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
 export function createPublicId(): string {
-  return randomBytes(12).toString("base64url");
+  return createToken().slice(0, 16);
 }
