@@ -1,0 +1,52 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Event {
+  id                  String        @id @default(cuid())
+  publicId            String        @unique
+  organizerTokenHash  String
+  title               String
+  description         String?
+  timezone            String        @default("Asia/Tokyo")
+  startDate           DateTime      @db.Date
+  endDate             DateTime      @db.Date
+  dailyStartMinute    Int
+  dailyEndMinute      Int
+  slotMinutes         Int
+  requiredDurationMin Int
+  confirmedStartAt    DateTime?
+  confirmedEndAt      DateTime?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  participants        Participant[]
+}
+
+model Participant {
+  id             String             @id @default(cuid())
+  eventId        String
+  displayName    String
+  editTokenHash  String
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  event          Event              @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  availabilities Availability[]
+
+  @@index([eventId])
+}
+
+model Availability {
+  id            String      @id @default(cuid())
+  participantId String
+  startsAt      DateTime
+  participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+
+  @@unique([participantId, startsAt])
+  @@index([startsAt])
+}
